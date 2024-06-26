@@ -119,13 +119,11 @@
 <body>
     <div id="scoreboard">
         <h2 class="tituloscore">Ranking</h2>
-        <ul id="score-list">
-        </ul>
+        <ul id="score-list"></ul>
     </div>
     <div id="game">
         <h1 class="titulo rainbow-text">Game Arena</h1>
         <form id="score-form">
-            <input type="text" id="player" name="player" placeholder="Nome do jogador" required autocomplete="off">
             <textarea id="equation" name="equation" readonly rows="5" cols="25"></textarea>
             <input type="number" id="answer" name="answer" placeholder="Sua resposta" required>
             <button type="submit">ENVIAR RESPOSTA</button>
@@ -133,17 +131,22 @@
     </div>
 
     <script>
-        const playerScores = JSON.parse(localStorage.getItem('playerScores')) || {};
         const roomCode = localStorage.getItem('roomCode');
         const playerName = localStorage.getItem('playerName');
 
-        if (!roomCode || !playerName) {
-            window.location.href = 'index.html';
+        const allScores = JSON.parse(localStorage.getItem('allScores')) || {};
+        if (!allScores[roomCode]) {
+            allScores[roomCode] = {};
+        }
+        const playerScores = allScores[roomCode];
+
+        if (!playerScores[playerName]) {
+            playerScores[playerName] = 0;
         }
 
         const pairs = [];
-        for (let i = 1; i <= 10; i++) {
-            for (let j = 1; i <= 10; j++) {
+        for (let i = 2; i <= 10; i++) { // Começa do 2 ao invés de 1
+            for (let j = 2; j <= 10; j++) { // Começa do 2 ao invés de 1
                 pairs.push([i, j]);
             }
         }
@@ -179,49 +182,40 @@
         }
 
         function updateScoreboard() {
+            const scores = Object.entries(playerScores).sort((a, b) => b[1] - a[1]);
             const scoreList = document.getElementById('score-list');
             scoreList.innerHTML = '';
-
-            if (playerScores[roomCode]) {
-                const sortedPlayers = Object.entries(playerScores[roomCode]).sort(([, a], [, b]) => b - a);
-
-                sortedPlayers.forEach(([name, score], index) => {
-                    const listItem = document.createElement('li');
-                    listItem.className = 'player-score';
-                    if (index === 0) listItem.classList.add('first-place');
-                    else if (index === 1) listItem.classList.add('second-place');
-                    else if (index === 2) listItem.classList.add('third-place');
-
-                    listItem.textContent = `${name}: ${score}`;
-                    scoreList.appendChild(listItem);
-                });
-            }
+            scores.forEach((score, index) => {
+                const li = document.createElement('li');
+                li.textContent = `${score[0]}: ${score[1]}`;
+                li.classList.add('player-score');
+                if (index === 0) li.classList.add('first-place');
+                else if (index === 1) li.classList.add('second-place');
+                else if (index === 2) li.classList.add('third-place');
+                scoreList.appendChild(li);
+            });
+            allScores[roomCode] = playerScores;
+            localStorage.setItem('allScores', JSON.stringify(allScores));
         }
 
         document.getElementById('score-form').addEventListener('submit', function(event) {
             event.preventDefault();
-
-            const player = playerName;
+            const answer = parseFloat(document.getElementById('answer').value);
             const equation = document.getElementById('equation').value;
-            const answer = parseInt(document.getElementById('answer').value);
-
             const correctAnswer = calculateEquation(equation);
+
             if (answer === correctAnswer) {
-                if (!playerScores[roomCode]) playerScores[roomCode] = {};
-                if (!playerScores[roomCode][player]) playerScores[roomCode][player] = 0;
-                playerScores[roomCode][player]++;
+                playerScores[playerName] += 1;
 
-                localStorage.setItem('playerScores', JSON.stringify(playerScores));
                 updateScoreboard();
+                document.getElementById('answer').value = '';
+                document.getElementById('equation').value = generateNextEquation();
+            } else {
+                alert('RESPOSTA ERRADA!!!');
             }
-
-            document.getElementById('answer').value = '';
-            document.getElementById('equation').value = generateNextEquation();
         });
 
-        document.getElementById('player').value = playerName;
         document.getElementById('equation').value = generateNextEquation();
-
         updateScoreboard();
     </script>
 </body>
